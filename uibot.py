@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
+import requests
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 ADMIN = os.environ["ADMIN"]
+
+# Se activa el logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # MANEJADORES DE COMANDOS
 def start(bot, update):
@@ -19,7 +24,8 @@ def ping(bot, update):
 	update.message.reply_text("pong")
 
 def buscarFoto(bot, update):
-	update.message.reply_text("https://source.unsplash.com/1000x1000/?" + update.message.text )
+	r = requests.head('https://source.unsplash.com/1000x1000/?' + update.message.text)
+	update.message.reply_text(r.headers['location'])
 
 def error(bot, update, error):
 	logger.warning('Update "%s" caused error "%s"', update, error)
@@ -27,14 +33,11 @@ def error(bot, update, error):
 # Se inicia el bot
 def startBot():
 	TOKEN = os.environ["BOTTOKEN"]
-	NAME = "unsplashimagebot"
-
-	# Se usa el puerto de Heroku
+	NAME = os.environ["NAME"]
 	PORT = os.environ.get('PORT')
 
 	# Activa logging
-	logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-						level=logging.INFO)
+	logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 	logger = logging.getLogger(__name__)
 
 	# Se configura el updater
@@ -49,9 +52,7 @@ def startBot():
 	dp.add_error_handler(error)
 	
 	# Lanza el webhook
-	updater.start_webhook(listen="0.0.0.0",
-						  port=int(PORT),
-						  url_path=TOKEN)
+	updater.start_webhook(listen="0.0.0.0",port=int(PORT),url_path=TOKEN)
 	updater.bot.setWebhook("https://{}.herokuapp.com/{}".format(NAME, TOKEN))
 	updater.idle()
 
