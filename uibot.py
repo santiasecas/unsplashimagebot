@@ -57,4 +57,4 @@ def startBot():
 	updater.idle()
 
 if __name__ == "__main__":
-startBot()
+	startBot()
