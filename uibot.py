@@ -1,60 +1,54 @@
 # -*- coding: utf-8 -*-
-import logging
 import os
 import requests
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import configparser
 
-ADMIN = os.environ["ADMIN"]
+from telegram import ForceReply, Update
+from telegram.ext import Updater, CommandHandler, ContextTypes, MessageHandler, Filters
 
-# Se activa el logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
+ruta = os.path.dirname(__file__)
+config = configparser.ConfigParser()
+config.read(f'{ruta}/config.ini')
+
+ADMIN = config['BOT_CONFIG']['ADMIN']
+
 
 # MANEJADORES DE COMANDOS
-def start(bot, update):
-	bot.send_message(ADMIN,'Usuario iniciado: @' + str(update.message.from_user.username))
-	update.message.reply_text('Bienvenido ' + update.message.from_user.username)
+def start(update, context):
+    nuevo_usuario = str(update.message.from_user.username)
+    context.bot.send_message(ADMIN,f'Nuevo usuario: @{nuevo_usuario}')
 
 # Se envía mensaje de ayuda con info
-def help(bot, update):
-	update.message.reply_text('Help!')
+def help(update, context):
+    update.message.reply_text('Help!')
 
 # Se envía mensaje de ayuda con info
-def ping(bot, update):
-	update.message.reply_text("pong")
+def ping(update, context):
+    update.message.reply_text("pong")
 
-def buscarFoto(bot, update):
-	r = requests.head('https://source.unsplash.com/1000x1000/?' + update.message.text)
-	update.message.reply_text(r.headers['location'])
+def fetch_picture(update, context):
+    msg = update.message.text
+    req = requests.head(f'http://api.santibaidez.es:443/unsplash_bot/get_picture/{msg}/')
+    print(req)
+    update.message.reply_text(req)
 
-def error(bot, update, error):
-	logger.warning('Update "%s" caused error "%s"', update, error)
 
 # Se inicia el bot
-def startBot():
-	TOKEN = os.environ["BOTTOKEN"]
-	NAME = os.environ["NAME"]
-	PORT = os.environ.get('PORT')
-
-	# Activa logging
-	logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-	logger = logging.getLogger(__name__)
-
-	# Se configura el updater
-	updater = Updater(TOKEN)
-	dp = updater.dispatcher
-	
-	# Manejadores de comandos
-	dp.add_handler(CommandHandler("help", help))
-	dp.add_handler(CommandHandler('start', start))
-	dp.add_handler(CommandHandler('ping', ping))
-	dp.add_handler(MessageHandler(Filters.text, buscarFoto))
-	dp.add_error_handler(error)
-	
-	# Lanza el webhook
-	updater.start_webhook(listen="0.0.0.0",port=int(PORT),url_path=TOKEN)
-	updater.bot.setWebhook("https://{}.herokuapp.com/{}".format(NAME, TOKEN))
-	updater.idle()
+def main():
+    TOKEN = config['BOT_CONFIG']['BOTTOKEN']
+    
+    # Se configura el updater
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
+    
+    # Manejadores de comandos
+    dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('ping', ping))
+    dp.add_handler(MessageHandler(Filters.text, fetch_picture))
+    
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
-	startBot()
+    main()
