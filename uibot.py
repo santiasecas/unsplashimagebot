@@ -28,9 +28,8 @@ def ping(update, context):
 
 def fetch_picture(update, context):
     msg = update.message.text
-    req = requests.head(f'http://api.santibaidez.es:443/unsplash_bot/get_picture/{msg}/')
-    print(req)
-    update.message.reply_text(req)
+    req = requests.get(f'http://api.santibaidez.es:443/unsplash_bot/get_picture/{msg}/')
+    update.message.reply_text(req.text)
 
 
 # Se inicia el bot
